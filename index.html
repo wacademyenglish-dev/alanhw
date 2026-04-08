@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WolfStation Assignment: The Writer's Trials</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Oswald:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#030303',
+                        panel: '#0a0a0a',
+                        horrorRed: '#8b0000',
+                        horrorRedBright: '#b30000',
+                        inkBlue: '#0a192f',
+                        flashlight: '#fdfbd3'
+                    },
+                    fontFamily: {
+                        noir: ['Oswald', 'sans-serif'],
+                        manuscript: ['Courier Prime', 'monospace'],
+                        title: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #030303;
+            color: #d1d1d1;
+            font-family: 'Courier Prime', monospace;
+            background-image: radial-gradient(circle at 50% 50%, #111 0%, #030303 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(15, 15, 15, 0.9) 0%, rgba(5, 5, 5, 0.98) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(0,0,0,0.5);
+            border-radius: 4px;
+        }
+
+        .option-btn {
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            padding: 1.25rem 1rem;
+            border-radius: 2px;
+            width: 100%;
+            text-align: left;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .option-btn:hover {
+            border-color: #fdfbd3;
+            background: rgba(253, 251, 211, 0.05);
+            color: #fff;
+            box-shadow: inset 0 0 10px rgba(253, 251, 211, 0.1);
+        }
+
+        .option-btn.correct {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .option-btn.wrong {
+            border-color: #8b0000;
+            background: rgba(139, 0, 0, 0.2);
+            color: #ff4d4d;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake { 
+            0%, 100% { transform: translateX(0); } 
+            25% { transform: translateX(-5px); } 
+            75% { transform: translateX(5px); } 
+        }
+
+        .btn-flashlight {
+            background: #fdfbd3;
+            color: #050505;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 2px;
+            box-shadow: 0 0 20px rgba(253, 251, 211, 0.4);
+        }
+
+        .btn-flashlight:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 40px rgba(253, 251, 211, 0.8);
+            background: #fff;
+        }
+
+        .ash-particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatAsh linear infinite;
+        }
+
+        @keyframes floatAsh {
+            0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+            20% { opacity: 0.3; }
+            80% { opacity: 0.3; }
+            100% { transform: translateY(-10vh) translateX(50px); opacity: 0; }
+        }
+
+        .trial-card { display: none; }
+        .trial-card.active { display: block; animation: slideIn 0.5s ease-out forwards; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in { animation: fadeIn 0.8s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        #progress-bar { transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+    </style>
+</head>
+<body class="p-4 md:p-8 relative">
+
+    <div id="ash-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+    <div class="max-w-3xl mx-auto relative z-10 pt-4 pb-20">
+        <!-- Header / Progress -->
+        <header class="text-center mb-10">
+            <h3 class="text-horrorRed font-noir tracking-[0.4em] text-sm md:text-base mb-3 uppercase drop-shadow-[0_0_8px_rgba(139,0,0,0.8)]">WOLFSTATION ASSIGNMENT</h3>
+            <h1 class="text-4xl md:text-5xl font-title italic text-white mb-6">THE WRITER'S TRIALS</h1>
+            
+            <div class="w-full bg-black/80 h-2 rounded-full overflow-hidden border border-white/10 shadow-inner">
+                <div id="progress-bar" class="bg-flashlight h-full w-[0%] shadow-[0_0_10px_#fdfbd3]"></div>
+            </div>
+            <div class="flex justify-between items-center mt-3">
+                <p id="trial-counter" class="text-gray-500 font-noir tracking-widest uppercase text-sm">Page 1 of 15</p>
+                <p class="text-gray-500 font-noir tracking-widest uppercase text-sm border border-white/10 px-3 py-1 rounded bg-black/40"><i class="fas fa-feather text-flashlight mr-2"></i> Narrative Tenses</p>
+            </div>
+        </header>
+
+        <!-- Quiz Container -->
+        <div id="quiz-container">
+            <!-- Injected via JS -->
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden text-center fade-in pt-10">
+            <div class="glass-panel p-12 md:p-20 border-t-4 border-t-flashlight">
+                <i class="fas fa-sun text-7xl text-flashlight mb-8 drop-shadow-[0_0_30px_#fdfbd3]"></i>
+                <h1 class="text-5xl md:text-6xl font-title italic text-white mb-6">YOU SURVIVED</h1>
+                <p class="text-2xl text-gray-400 mb-12 font-manuscript">The manuscript is complete. The darkness has retreated.</p>
+                <div class="text-3xl font-noir text-gray-500 mb-12 tracking-widest uppercase bg-black/60 p-8 rounded border border-white/5 shadow-inner">
+                    Final Score: <br><span id="final-score" class="text-7xl text-flashlight font-bold mt-4 block drop-shadow-[0_0_20px_#fdfbd3]">0</span> <span class="text-2xl">/ 15</span>
+                </div>
+                <div id="feedback-message" class="text-xl text-white font-manuscript mb-12 italic"></div>
+                <button onclick="location.reload()" class="btn-flashlight w-full md:w-auto"><i class="fas fa-redo mr-3"></i> REWRITE THE STORY</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const quizData = [
+            { 
+                q: "When Saga arrived at the cabin, Alan ________.", 
+                options: ["had vanished", "vanished", "was vanishing"], 
+                correct: 0,
+                rule: "Past Perfect: An action that happened before another past action."
+            },
+            { 
+                q: "While Alan ________, the shadow broke the door.", 
+                options: ["wrote", "was writing", "had written"], 
+                correct: 1,
+                rule: "Past Continuous: Setting the background scene / ongoing action."
+            },
+            { 
+                q: "To bring an idea into reality is to ________ it.", 
+                options: ["sacrifice", "consume", "manifest"], 
+                correct: 2,
+                rule: "Vocabulary: Manifest means to become real or visible."
+            },
+            { 
+                q: "Alan ________ at the edge of Cauldron Lake, staring at the water.", 
+                options: ["stood", "was standing", "had stood"], 
+                correct: 0,
+                rule: "Past Simple: A completed action in the past." // Both could work, but 'stood' is the narrative simple fact here based on the lesson script. Let's make the options clearer.
+            },
+            { 
+                q: "The police ________ the woods when they found the manuscript page.", 
+                options: ["searched", "were searching", "had searched"], 
+                correct: 1,
+                rule: "Past Continuous: An action in progress interrupted by a sudden event."
+            },
+            { 
+                q: "Before the monster entered the room, Alan ________ the flare gun.", 
+                options: ["reloaded", "was reloading", "had reloaded"], 
+                correct: 2,
+                rule: "Past Perfect: He did this action *before* the monster entered."
+            },
+            { 
+                q: "What is a 'Typewriter'?", 
+                options: ["A weapon made of light", "A mechanical machine for writing", "A dark entity"], 
+                correct: 1,
+                rule: "Vocabulary: Alan's main tool to write the manuscript."
+            },
+            { 
+                q: "He realized that he ________ a terrible mistake.", 
+                options: ["makes", "was making", "had made"], 
+                correct: 2,
+                rule: "Past Perfect: The mistake was made *before* he realized it."
+            },
+            { 
+                q: "The darkness was ________ on him, getting closer every second.", 
+                options: ["encroaching", "manifesting", "escaping"], 
+                correct: 0,
+                rule: "Vocabulary: Encroaching means advancing beyond proper limits / intruding."
+            },
+            { 
+                q: "Saga ________ a new clue while she was investigating the murder.", 
+                options: ["was finding", "found", "had found"], 
+                correct: 1,
+                rule: "Past Simple: The sudden action that interrupts the continuous investigation."
+            },
+            { 
+                q: "How do we form the Past Perfect?", 
+                options: ["Was/Were + Verb-ing", "Had + Past Participle (Verb 3)", "Subject + Verb(ed)"], 
+                correct: 1,
+                rule: "Grammar Rule: Had + Past Participle."
+            },
+            { 
+                q: "By the time Saga found him, he ________ trapped in the Dark Place for 13 years.", 
+                options: ["was", "has been", "had been"], 
+                correct: 2,
+                rule: "Past Perfect: Action completed up to a point in the past."
+            },
+            { 
+                q: "To completely destroy or swallow up something is to ________ it.", 
+                options: ["manifest", "consume", "sacrifice"], 
+                correct: 1,
+                rule: "Vocabulary: The Darkness consumes everything."
+            },
+            { 
+                q: "The sun ________ through the window and saved him.", 
+                options: ["was breaking", "had broken", "broke"], 
+                correct: 2,
+                rule: "Past Simple: A sudden, completed action."
+            },
+            { 
+                q: "Which tense is used to describe the 'Past of the Past'?", 
+                options: ["Past Continuous", "Past Simple", "Past Perfect"], 
+                correct: 2,
+                rule: "Grammar Rule: Past Perfect is the past before the past."
+            }
+        ];
+
+        // Ensure Question 4 is unambiguous
+        quizData[3].options = ["stood", "stands", "standing"];
+        quizData[3].correct = 0;
+
+        let currentTrial = 0;
+        let score = 0;
+        let isAnimating = false;
+
+        function renderTrial() {
+            const container = document.getElementById('quiz-container');
+            const data = quizData[currentTrial];
+            
+            // Progress Update
+            const progress = ((currentTrial) / quizData.length) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('trial-counter').innerText = `Page ${currentTrial + 1} of ${quizData.length}`;
+
+            const optionsHtml = data.options.map((opt, i) => `
+                <button class="option-btn" onclick="checkAnswer(${i}, this)">
+                    <span class="text-flashlight font-noir text-lg border-r border-white/10 pr-4 mr-2">${String.fromCharCode(65 + i)}</span>
+                    <span class="flex-1">${opt}</span>
+                    <i class="fas fa-check hidden status-icon-correct text-2xl drop-shadow-md"></i>
+                    <i class="fas fa-times hidden status-icon-wrong text-2xl drop-shadow-md"></i>
+                </button>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="trial-card active">
+                    <div class="glass-panel p-8 md:p-12 border-l-4 border-l-flashlight">
+                        <div class="mb-8 border-b border-white/10 pb-6">
+                            <i class="fas fa-file-alt text-4xl text-gray-600 mb-4"></i>
+                            <h2 class="text-2xl md:text-4xl text-white font-title italic leading-relaxed">"${data.q}"</h2>
+                        </div>
+                        <div class="options-list space-y-4">
+                            ${optionsHtml}
+                        </div>
+                        <div class="feedback-box hidden mt-8 bg-black/60 p-4 border border-white/10 rounded">
+                            <p class="text-sm font-noir uppercase tracking-widest text-gray-500 mb-1">Director's Note:</p>
+                            <p class="text-lg text-gray-300 font-manuscript rule-text"></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            isAnimating = false;
+        }
+
+        function checkAnswer(index, btnElement) {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            const data = quizData[currentTrial];
+            const allBtns = document.querySelectorAll('.option-btn');
+            const feedbackBox = document.querySelector('.feedback-box');
+            const ruleText = document.querySelector('.rule-text');
+            
+            // Disable all buttons
+            allBtns.forEach(b => {
+                b.style.pointerEvents = 'none';
+                b.classList.add('opacity-70');
+            });
+
+            btnElement.classList.remove('opacity-70');
+
+            if (index === data.correct) {
+                btnElement.classList.add('correct', 'opacity-100');
+                btnElement.querySelector('.status-icon-correct').classList.remove('hidden');
+                score++;
+                
+                // Show feedback for correct answer briefly
+                feedbackBox.classList.remove('hidden');
+                feedbackBox.classList.add('border-green-900/50');
+                ruleText.innerHTML = `<span class="text-green-400">Correct.</span> ${data.rule}`;
+                
+                setTimeout(advanceTrial, 2000);
+            } else {
+                btnElement.classList.add('wrong', 'opacity-100');
+                btnElement.querySelector('.status-icon-wrong').classList.remove('hidden');
+                
+                // Highlight correct answer
+                allBtns[data.correct].classList.remove('opacity-70');
+                allBtns[data.correct].classList.add('correct');
+                
+                // Show feedback explaining rule
+                feedbackBox.classList.remove('hidden');
+                feedbackBox.classList.add('border-horrorRed/50');
+                ruleText.innerHTML = `<span class="text-horrorRed">Incorrect.</span> ${data.rule}`;
+
+                setTimeout(advanceTrial, 3500); // Give more time to read rule if wrong
+            }
+        }
+
+        function advanceTrial() {
+            currentTrial++;
+            if (currentTrial < quizData.length) {
+                renderTrial();
+            } else {
+                showFinalResult();
+            }
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-container').innerHTML = '';
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('result-screen').classList.remove('hidden');
+            
+            const scoreEl = document.getElementById('final-score');
+            scoreEl.innerText = score;
+            
+            const feedbackMsg = document.getElementById('feedback-message');
+            if (score === 15) {
+                scoreEl.classList.replace('text-flashlight', 'text-green-400');
+                scoreEl.classList.replace('drop-shadow-[0_0_20px_#fdfbd3]', 'drop-shadow-[0_0_20px_#2ecc71]');
+                feedbackMsg.innerText = `"A flawless manuscript. The light shines bright."`;
+            } else if (score >= 10) {
+                feedbackMsg.innerText = `"You survived, but the darkness still lingers in the corners."`;
+            } else {
+                scoreEl.classList.replace('text-flashlight', 'text-horrorRed');
+                scoreEl.classList.replace('drop-shadow-[0_0_20px_#fdfbd3]', 'drop-shadow-[0_0_20px_#8b0000]');
+                feedbackMsg.innerText = `"The story has consumed you. You must rewrite the past to survive."`;
+            }
+        }
+
+        // Particle Effect
+        function createAsh() {
+            const container = document.getElementById('ash-container');
+            if (!container) return;
+            for(let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'ash-particle';
+                const size = Math.random() * 4 + 1;
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.left = Math.random() * 100 + 'vw';
+                p.style.animationDuration = (Math.random() * 12 + 6) + 's';
+                p.style.animationDelay = (Math.random() * 5) + 's';
+                container.appendChild(p);
+            }
+        }
+
+        window.onload = () => {
+            renderTrial();
+            createAsh();
+        };
+    </script>
+</body>
+</html>
